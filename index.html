@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>背单词挑战 | Vocab Challenge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob top-left"></div>
+        <div class="blob bottom-right"></div>
+    </div>
+    
+    <!-- 主界面 -->
+    <div class="app-container" id="setup-screen">
+        <div class="top-nav">
+            <div class="global-score">
+                <span>我的总积分</span>
+                <h3 id="global-total-points">0</h3>
+            </div>
+            <div class="nav-buttons">
+                <button id="btn-rewards" class="text-btn">🎁 奖励库</button>
+                <button id="btn-history" class="text-btn">📅 历史记录</button>
+            </div>
+        </div>
+
+        <div class="glass-card setup-card mt-2">
+            <h1>Vocab Challenge</h1>
+            
+            <div class="mode-tabs">
+                <button class="tab-btn active" data-mode="point">积分制</button>
+                <button class="tab-btn" data-mode="plan">计划制</button>
+            </div>
+
+            <!-- 积分模式设置 -->
+            <div id="point-settings" class="settings-group">
+                <p>设定今天的挑战目标积分</p>
+                <div class="input-group">
+                    <input type="number" id="target-score-input" value="10" min="1" max="1000" />
+                    <label>目标积分</label>
+                </div>
+                <div class="rules">
+                    <p><strong>积分规则：</strong></p>
+                    <ul>
+                        <li>🎯 完成设定目标，总积分增加。</li>
+                        <li>⚠️ 漏打卡扣 20 分。</li>
+                        <li><span class="tag high">高频</span> +1 | -1</li>
+                        <li><span class="tag mid">中频</span> +2 | -2</li>
+                        <li><span class="tag low">低频</span> +3 | -3</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 计划模式设置 -->
+            <div id="plan-settings" class="settings-group hidden">
+                <p>按部就班，每天攻克一批新单词</p>
+                <div class="progress-info">
+                    当前进度：<span id="plan-progress-text">已背完 0/2000 词</span>
+                </div>
+                <div class="input-group">
+                    <input type="number" id="daily-count-input" value="50" min="1" max="200" />
+                    <label>每日背词数</label>
+                </div>
+                <div class="rules">
+                    <p><strong>计划规则：</strong></p>
+                    <ul>
+                        <li>📈 随机学习新词，自动记录已掌握名单。</li>
+                        <li>🔄 每一组词必须全部测对才算掌握。</li>
+                        <li>🏆 学完后根据单词权重 (1,2,3 分) 获得总奖励。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button id="start-btn" class="glow-btn">开始挑战</button>
+        </div>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div class="app-container hidden" id="game-screen">
+        <div class="header">
+            <div class="score-board">
+                <div class="score-item" id="score-progress-item">
+                    <span id="progress-label">当前进度</span>
+                    <h2 id="current-score">0</h2>
+                </div>
+                <div class="divider"></div>
+                <div class="score-item" id="target-display-item">
+                    <span id="target-label">目标积分</span>
+                    <h2 id="target-score-display">10</h2>
+                </div>
+            </div>
+            <button id="quit-btn" class="text-btn">退出</button>
+        </div>
+
+        <div class="glass-card game-card">
+            <div class="frequency-badge" id="word-freq">高频 (+1/-1)</div>
+            <h1 class="main-word" id="chinese-meaning">苹果</h1>
+            
+            <div class="hint-container" id="hint-container">
+                <p class="hint-text" id="phonetic-hint">/音标/</p>
+            </div>
+            
+            <div class="input-container">
+                <input type="text" id="english-input" placeholder="输入英文单词..." autocomplete="off"/>
+                <span class="space-hint">按 ␣ (Space) 获取音标提示</span>
+            </div>
+            
+            <button id="submit-btn" class="glow-btn">提交 (Enter)</button>
+        </div>
+    </div>
+
+    <!-- 评审/结果界面 -->
+    <div class="app-container hidden" id="review-screen">
+        <div class="glass-card review-card">
+            <h1>本轮学习总结</h1>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <span id="stat-accuracy-label">正确率</span>
+                    <h2 id="stat-accuracy">0%</h2>
+                </div>
+                <div class="stat-item">
+                    <span>还剩未掌握</span>
+                    <h2 id="stat-remaining">0</h2>
+                </div>
+            </div>
+
+            <div class="word-list-container">
+                <div class="word-list-header">
+                    <span>单词明细</span>
+                </div>
+                <div id="review-word-list" class="list-container">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="retest-btn" class="glow-btn">针对性重测 (只测错词)</button>
+                <button id="finish-plan-btn" class="glow-btn success hidden">全部掌握！确定打卡</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功界面 -->
+    <div class="app-container hidden" id="success-screen">
+        <div class="glass-card success-card">
+            <div class="trophy">🏆</div>
+            <h1 id="success-title">今日打卡成功！</h1>
+            <p id="success-msg">由于完成了设定的目标 <span id="final-target">10</span> 分，您的总积分增加了！</p>
+            
+            <div class="reward-progress-box">
+                <p>当前总积分：<strong class="highlight" id="final-total-score">100</strong></p>
+                <div id="next-reward-info">
+                    <p>距离最近的奖励 <strong class="highlight" id="next-reward-name">游乐园</strong><br/>
+                    还有 <strong class="highlight" id="next-reward-diff">20</strong> 分！加油！</p>
+                </div>
+            </div>
+
+            <button id="restart-btn" class="glow-btn mt-2">返回主页</button>
+        </div>
+    </div>
+
+    <!-- 奖励设置弹窗 -->
+    <div class="app-modal hidden" id="rewards-modal">
+        <div class="glass-card modal-card">
+            <div class="modal-header">
+                <h2>🎁 奖励库配置</h2>
+                <button class="close-btn" id="close-rewards">&times;</button>
+            </div>
+            <div class="add-reward-form" style="display:flex; gap:10px; width:100%; margin-bottom: 15px;">
+                <input type="text" id="reward-name" placeholder="奖励名称 (如: 去动物园)" style="flex:2;" />
+                <input type="number" id="reward-points" placeholder="积分阈值" style="flex:1;" />
+                <button id="add-reward-btn" class="glow-btn" style="width:auto; padding:0 15px;">添加</button>
+            </div>
+            <div class="list-container" id="rewards-list-container">
+                <!-- 奖励项将在这里动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 历史记录弹窗 -->
+    <div class="app-modal hidden" id="history-modal">
+        <div class="glass-card modal-card">
+            <div class="modal-header">
+                <h2>📅 历史打卡记录</h2>
+                <button class="close-btn" id="close-history">&times;</button>
+            </div>
+            <div class="list-container" id="history-list-container">
+                <!-- 历史项将在这里动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="words.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
