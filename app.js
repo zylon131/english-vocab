@@ -225,32 +225,39 @@ function initPointMode() {
 function initPlanMode() {
     const requestedCount = parseInt(dailyCountInput.value) || 50;
     
-    // Regenerate batch if:
-    // 1. Batch is empty
-    // 2. The count requested is different from current batch size (user wants to change plan)
+    // Ensure stats exist
+    if (!state.wordStats) state.wordStats = {};
+
+    // Regenerate batch if empty or if count changed
     if (state.currentBatch.length === 0 || state.currentBatch.length !== requestedCount) {
         state.dailyGoal = requestedCount;
         state.currentBatch = [];
         
-        // Find all available indices
-        let allIndices = [];
-        for (let i = 0; i < words.length; i++) allIndices.push(i);
+        // Find all unmastered words and calculate weights
+        let weightedList = [];
+        for (let i = 0; i < words.length; i++) {
+            if (!state.masteredIndices.includes(i)) {
+                const stats = state.wordStats[i] || { e: 0, s: 0 };
+                // Weight formula: base 10 + (errors * 20). 
+                // This makes words with errors much more likely to show up.
+                const weight = 10 + (stats.e * 20);
+                weightedList.push({ index: i, weight: weight + (Math.random() * 5) });
+            }
+        }
         
-        let available = allIndices.filter(i => !state.masteredIndices.includes(i));
-        
-        if (available.length === 0) {
-            showToast("恭喜你！你已经背完了词库里的所有单词！", true);
+        if (weightedList.length === 0) {
+            showToast("恭喜你！你已经背完了所有单词！", true);
             return;
         }
 
-        // Shuffle available indices
-        available.sort(() => Math.random() - 0.5);
+        // Sort by weight (highest first)
+        weightedList.sort((a, b) => b.weight - a.weight);
         
-        // Take top dailyGoal words
-        const numToTake = Math.min(state.dailyGoal, available.length);
+        // Take the top weighted words
+        const numToTake = Math.min(state.dailyGoal, weightedList.length);
         for (let i = 0; i < numToTake; i++) {
             state.currentBatch.push({
-                index: available[i],
+                index: weightedList[i].index,
                 status: 'untested'
             });
         }
@@ -333,15 +340,28 @@ function checkAnswer() {
         }
     } else {
         const wordInBatch = state.currentBatch[currentBatchIndex];
+        const idx = wordInBatch.index;
+        if (!state.wordStats[idx]) state.wordStats[idx] = { e: 0, s: 0 };
+        const stats = state.wordStats[idx];
+
         if (isCorrect) {
             wordInBatch.status = 'correct';
+            stats.s++; // 连续正确次数 +1
+            if (stats.s >= 3) {
+                if (!state.masteredIndices.includes(idx)) {
+                    state.masteredIndices.push(idx);
+                }
+            }
             showToast('回答正确！', true);
         } else {
             wordInBatch.status = 'wrong';
+            stats.e++; // 错误总数 +1
+            stats.s = 0; // 连续正确中断，重置为 0
             showToast('回答错误！已记录', false);
             shakeCard();
         }
         updatePlanScore();
+        saveState();
         setTimeout(loadNextWord, 600);
     }
 }
@@ -370,6 +390,15 @@ function handlePointModeSuccess() {
 }
 
 function handleBatchRoundComplete() {
+    // Reset any existing filter from a previous run
+    reviewWordList.classList.remove('show-only-wrong');
+    const remainingBox = document.getElementById('stat-remaining-box');
+    const remainingLabel = document.getElementById('stat-remaining-label');
+    if (remainingBox) {
+        remainingBox.classList.remove('filtering-wrong');
+        remainingLabel.textContent = "🔴 点击看错题";
+    }
+
     // Check if everything is correct
     const allCorrect = state.currentBatch.every(w => w.status === 'correct');
     
@@ -381,7 +410,17 @@ function handleBatchRoundComplete() {
     const correctCount = state.currentBatch.filter(w => w.status === 'correct').length;
     const accuracy = Math.round((correctCount / state.currentBatch.length) * 100);
     statAccuracy.textContent = accuracy + '%';
-    statRemaining.textContent = state.currentBatch.length - correctCount;
+    const remainingCount = state.currentBatch.length - correctCount;
+    statRemaining.textContent = remainingCount;
+
+    // Attach click handler for filtering if it's the first time or reuseable
+    if (remainingBox) {
+        remainingBox.onclick = () => {
+            const isFiltering = reviewWordList.classList.toggle('show-only-wrong');
+            remainingBox.classList.toggle('filtering-wrong', isFiltering);
+            remainingLabel.textContent = isFiltering ? "👇 点击看全量" : "🔴 点击看错题";
+        };
+    }
 
     if (allCorrect) {
         finishPlanBtn.classList.remove('hidden');
@@ -400,7 +439,10 @@ function renderReviewList() {
         el.className = `review-item ${item.status}`;
         el.innerHTML = `
             <div class="review-word-info">
-                <strong>${wordObj.word}</strong>
+                <div class="word-with-phonetic">
+                    <strong>${wordObj.word}</strong>
+                    <span class="phonetic-small">${wordObj.phonetic || ''}</span>
+                </div>
                 <span>${wordObj.meaning}</span>
             </div>
             <div class="status-tag ${item.status}">

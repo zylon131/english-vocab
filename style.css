@@ -515,6 +515,23 @@ input[type="number"] { width: 120px; }
     margin: 0;
 }
 
+.stat-item.clickable {
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.stat-item.clickable:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.stat-item.clickable.filtering-wrong {
+    border-color: var(--wrong-color);
+    background: rgba(248, 81, 73, 0.1);
+    box-shadow: 0 0 15px rgba(248, 81, 73, 0.1);
+}
+#review-word-list.show-only-wrong .review-item.correct {
+    display: none;
+}
+
 .word-list-container {
     width: 100%;
     background: rgba(0, 0, 0, 0.2);
@@ -562,12 +579,21 @@ input[type="number"] { width: 120px; }
     flex-direction: column;
     gap: 2px;
 }
+.word-with-phonetic {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
 .review-word-info strong {
     font-size: 1.1rem;
 }
 .review-word-info span {
     font-size: 0.8rem;
     color: var(--text-secondary);
+}
+.phonetic-small {
+    font-family: "Segoe UI", "Lucida Sans Unicode", Arial, sans-serif;
+    color: var(--accent) !important;
 }
 .status-tag {
     font-size: 0.7rem;
